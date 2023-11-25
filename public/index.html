@@ -102,7 +102,7 @@
 
   <script>
 $(document).ready(() => {
-  const socket = io();
+  let socket = io();
   const messageInput = $('#messageInput');
   const fileInput = $('#fileInput');
   const messagesList = $('#messages');
