@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Chat App</title>
+  <!-- Add Bootstrap CSS link -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: black;
+    }
+    #chat-container {
+      width: 98%;
+      margin: auto;
+      margin-top: 50px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      background-color: #EEEADE;
+    }
+    #messages {
+      list-style-type: none;
+      padding: 0;
+    }
+    #messages li {
+      margin-bottom: 10px;
+      border-radius: 10px;
+    }
+    #form {
+      border-top: 1px solid #dee2e6;
+      padding: 10px;
+    }
+    #sendButton{
+        background-color: #17a2b8;
+        color: black;
+    }
+    #username-modal {
+      display: none;
+      background: rgba(0, 0, 0, 0.5);
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+    }
+    #sendImageLabel{
+        color: black;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+  <!-- Username Modal -->
+  <div id="username-modal" class="modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-info">
+          <h5 class="modal-title">Enter Your Username</h5>
+        </div>
+        <div class="modal-body">
+          <form id="username-form">
+            <div class="form-group">
+              <label for="username">Username:</label>
+              <input type="text" class="form-control" id="username" required>
+            </div>
+            <button type="submit" class="btn btn-info">Start Chatting</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="chat-container" class="card">
+    <div class="card-header bg-info text-violet text-center">
+      <h2 class="mb-0">B-Socio</h2>
+    </div>
+    <div class="card-body">
+      <ul id="messages" class="list-group"></ul>
+    </div>
+    <form id="form" class="card-footer bg-info">
+      <div class="input-group">
+        <input id="messageInput" type="text" class="form-control" autocomplete="off" disabled>
+        <div class="input-group-append">
+            <label id="sendImageLabel" class="btn btn-primary bg-info" for="fileInput">
+                <i class="fas fa-image"></i> <!-- Font Awesome image icon -->
+              </label>
+          <input type="file" id="fileInput" style="display: none">
+          <button id="sendButton" class="btn btn-primary bg-info" type="button" disabled>
+            <i class="fas fa-paper-plane"></i> <!-- Font Awesome paper plane icon -->
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <!-- Add Bootstrap JS and jQuery scripts -->
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script>
+$(document).ready(() => {
+  const socket = io();
+  const messageInput = $('#messageInput');
+  const fileInput = $('#fileInput');
+  const messagesList = $('#messages');
+  const sendButton = $('#sendButton');
+
+  const usernameModal = $('#username-modal');
+  const usernameInput = $('#username');
+  const usernameForm = $('#username-form');
+
+  function init() {
+    const storedUsername = localStorage.getItem('username');
+
+    if (storedUsername) {
+      $('#username').val(storedUsername);
+      enableChat();
+    } else {
+      $('#username-modal').modal('show');
+    }
+
+    usernameForm.submit((e) => {
+      e.preventDefault();
+      setUsername();
+    });
+        // Handle "Enter" key press in the message input
+        messageInput.keydown((e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent the default behavior (form submission or page reload)
+        sendMessage(); // Call your sendMessage function
+      }
+    });
+
+    fileInput.change(handleFileInputChange);
+    sendButton.click(() => sendMessage());
+
+    socket.on('messageHistory', displayMessageHistory);
+    socket.on('message', displayMessage);
+  }
+
+  function setUsername() {
+    const username = usernameInput.val().trim();
+    if (username !== '') {
+      localStorage.setItem('username', username);
+      usernameModal.modal('hide');
+      enableChat();
+    }
+  }
+
+  function enableChat() {
+    messageInput.prop('disabled', false);
+    sendButton.prop('disabled', false);
+    fileInput.prop('disabled', false);
+    // Connect to the socket and additional setup
+  }
+
+  function handleFileInputChange(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        sendMessage(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function sendMessage(message) {
+    const content = messageInput.val().trim();
+    if (content !== '' || (message && message.startsWith('data:image/'))) {
+      const username = localStorage.getItem('username') || 'Anonymous';
+      const finalMessage = `<strong>${username}:</strong> ${content}`;
+
+      if (message) {
+        finalMessage += `<br><img src="${message}" style="max-width: 100%; max-height: 200px;">`;
+      }
+
+      socket.emit('message', finalMessage);
+
+      messageInput.val('');
+      sendButton.prop('disabled', true);
+      fileInput.val('');
+    }
+  }
+
+  function displayMessageHistory(messages) {
+    messages.forEach((message) => displayMessage(message));
+    scrollToBottom();
+  }
+
+  function displayMessage(message) {
+    messagesList.append($('<li>').html(message).addClass('list-group-item'));
+    scrollToBottom();
+  }
+
+  function scrollToBottom() {
+    const chatContainer = $('#chat-container .card-body');
+    chatContainer.scrollTop(chatContainer[0].scrollHeight);
+  }
+
+  // Initialize the application
+  init();
+});
+  </script>  
+</body>
+</html>
