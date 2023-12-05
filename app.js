@@ -1,3 +1,8 @@
+function generateMessageId() {
+  // You need to implement a function to generate a unique message ID
+  // For simplicity, you can use a timestamp as the message ID, but this may not be foolproof in a real-world scenario
+  return Date.now().toString();
+}
 const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
@@ -16,18 +21,20 @@ io.on('connection', (socket) => {
   socket.emit('messageHistory', messages);
 
   socket.on('message', (message) => {
-    messages.push(message);
-    io.emit('message', message);
-  });
+    const messageId = generateMessageId();
+    const messageWithId = { id: messageId, content: message };
+    messages.push(messageWithId);
+    io.emit('message', messageWithId);
+  })
 
-  socket.on('deleteMessage', (index) => {
-    if (index >= 0 && index < messages.length) {
-      const message = messages[index];
-      const username = getUsernameFromMessage(message);
-
-      if (username === socket.username) {
-        messages.splice(index, 1);
-        io.emit('deleteMessage', index);
+  socket.on('deleteMessage', (messageId) => {
+    console.log('Received deleteMessage event on server', messageId);
+    if (messageId) {
+      const index = messages.findIndex((message) => message.id === messageId);
+      if (index !== -1) {
+        const deletedMessage = messages.splice(index, 1)[0];
+        io.emit('deleteMessage', { messageId: deletedMessage.id });
+        console.log('Message deleted on server', deletedMessage);
       }
     }
   });
@@ -40,10 +47,6 @@ io.on('connection', (socket) => {
     socket.username = username;
   });
 });
-
-function getUsernameFromMessage(message) {
-  return message.split(':')[0].replace('<strong>', '').trim();
-}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
