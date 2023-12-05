@@ -89,6 +89,9 @@
           <button id="sendButton" class="btn btn-primary bg-info" type="button" disabled>
             <i class="fas fa-paper-plane"></i> <!-- Font Awesome paper plane icon -->
           </button>
+          <button id="voiceButton" class="btn btn-primary bg-info" type="button">
+            <i class="fas fa-microphone"></i> <!-- Font Awesome microphone icon -->
+          </button>
         </div>
       </div>
     </form>
@@ -99,114 +102,179 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
   <script src="/socket.io/socket.io.js"></script>
+<script>
+  $(document).ready(() => {
+    let socket = io();
+    const messageInput = $('#messageInput');
+    const fileInput = $('#fileInput');
+    const messagesList = $('#messages');
+    const sendButton = $('#sendButton');
+    const voiceButton = $('#voiceButton');
+    const usernameModal = $('#username-modal');
+    const usernameInput = $('#username');
+    const usernameForm = $('#username-form');
+    let recognition;
 
-  <script>
-$(document).ready(() => {
-  let socket = io();
-  const messageInput = $('#messageInput');
-  const fileInput = $('#fileInput');
-  const messagesList = $('#messages');
-  const sendButton = $('#sendButton');
+    function init() {
+      const storedUsername = localStorage.getItem('username');
 
-  const usernameModal = $('#username-modal');
-  const usernameInput = $('#username');
-  const usernameForm = $('#username-form');
-
-  function init() {
-    const storedUsername = localStorage.getItem('username');
-
-    if (storedUsername) {
-      $('#username').val(storedUsername);
-      enableChat();
-    } else {
-      $('#username-modal').modal('show');
-    }
-
-    usernameForm.submit((e) => {
-      e.preventDefault(); // Prevent the default form submission behavior
-      setUsername();
-    });
-
-    // Handle "Enter" key press in the message input
-messageInput.keydown((e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault(); // Prevent the default behavior (form submission or page reload)
-    sendMessage(); // Call your sendMessage function
-  }
-});
-
-    fileInput.change(handleFileInputChange);
-    sendButton.click(() => sendMessage());
-
-    socket.on('messageHistory', displayMessageHistory);
-    socket.on('message', displayMessage);
-  }
-
-  function setUsername() {
-    const username = usernameInput.val().trim();
-    if (username !== '') {
-      localStorage.setItem('username', username);
-      usernameModal.modal('hide');
-      enableChat();
-      return false; // Prevent the default form submission behavior
-    }
-  }
-
-  function enableChat() {
-    messageInput.prop('disabled', false);
-    sendButton.prop('disabled', false);
-    fileInput.prop('disabled', false);
-    // Connect to the socket and additional setup
-  }
-
-  function handleFileInputChange(e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        sendMessage(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  function sendMessage(message) {
-    const content = messageInput.val().trim();
-    let finalMessage = '';
-
-    if (content !== '' || (message && message.startsWith('data:image/'))) {
-      const username = localStorage.getItem('username') || 'Anonymous';
-      finalMessage = `<strong>${username}:</strong> ${content}`;
-
-      if (message) {
-        finalMessage += `<br><img src="${message}" style="max-width: 100%; max-height: 200px;">`;
+      if (storedUsername) {
+        $('#username').val(storedUsername);
+        enableChat();
+      } else {
+        $('#username-modal').modal('show');
       }
 
-      socket.emit('message', finalMessage);
-      messageInput.val('');
-      // Enable the send button after sending a message
-      sendButton.prop('disabled', false);
-      fileInput.val('');
+      usernameForm.submit((e) => {
+        e.preventDefault();
+        setUsername();
+      });
+
+      messageInput.keydown((e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      voiceButton.click(() => {
+        toggleVoiceRecognition();
+      });
+
+      fileInput.change(handleFileInputChange);
+      sendButton.click(() => sendMessage());
+
+      socket.on('messageHistory', displayMessageHistory);
+      socket.on('message', displayMessage);
+      socket.on('deleteMessage', deleteMessage);
     }
-  }
 
-  function displayMessageHistory(messages) {
-    messages.forEach((message) => displayMessage(message));
-    scrollToBottom();
-  }
+    function setUsername() {
+      const username = usernameInput.val().trim();
+      if (username !== '') {
+        localStorage.setItem('username', username);
+        usernameModal.modal('hide');
+        enableChat();
+        return false;
+      }
+    }
 
-  function displayMessage(message) {
-    messagesList.append($('<li>').html(message).addClass('list-group-item'));
-    scrollToBottom();
-  }
+    function enableChat() {
+      messageInput.prop('disabled', false);
+      sendButton.prop('disabled', false);
+      fileInput.prop('disabled', false);
+      voiceButton.prop('disabled', false);
+    }
 
-  function scrollToBottom() {
-    const chatContainer = $('#chat-container .card-body');
-    chatContainer.scrollTop(chatContainer[0].scrollHeight);
-  }
+    function handleFileInputChange(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          sendMessage(event.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
 
-  init();
-});
-  </script>  
+    function sendMessage(message) {
+      const content = messageInput.val().trim();
+      let finalMessage = '';
+
+      if (content !== '' || (message && message.startsWith('data:image/'))) {
+        const username = localStorage.getItem('username') || 'Anonymous';
+        finalMessage = `<strong>${username}:</strong> ${content}`;
+
+        if (message) {
+          finalMessage += `<br><img src="${message}" style="max-width: 100%; max-height: 200px;">`;
+        }
+
+        socket.emit('message', finalMessage);
+        messageInput.val('');
+        sendButton.prop('disabled', false);
+        fileInput.val('');
+      }
+    }
+
+    function displayMessageHistory(messages) {
+      messages.forEach((message) => displayMessage(message));
+      scrollToBottom();
+    }
+
+    function displayMessage(message) {
+      const deleteButton = $('<button class="btn btn-danger btn-sm delete-button" style="display: none;">Delete</button>');
+      const listItem = $('<li>').html(message).addClass('list-group-item').append(deleteButton);
+
+      listItem.hover(
+        () => {
+          deleteButton.show();
+        },
+        () => {
+          deleteButton.hide();
+        }
+      );
+
+      deleteButton.click(() => {
+        const index = $('.delete-button').index(deleteButton);
+        socket.emit('deleteMessage', index);
+        deleteMessage(index);
+      });
+
+      messagesList.append(listItem);
+      scrollToBottom();
+    }
+
+    function deleteMessage(index) {
+      $('.list-group-item').eq(index).remove();
+      scrollToBottom();
+    }
+
+    function scrollToBottom() {
+      const chatContainer = $('#chat-container .card-body');
+      chatContainer.scrollTop(chatContainer[0].scrollHeight);
+    }
+
+    function toggleVoiceRecognition() {
+      if (recognition && recognition.isStarted) {
+        recognition.stop();
+      } else {
+        startVoiceRecognition();
+      }
+    }
+
+    function startVoiceRecognition() {
+      if ('webkitSpeechRecognition' in window) {
+        recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+          console.log('Speech recognition started...');
+        };
+
+        recognition.onresult = (event) => {
+          const interimTranscript = event.results[event.resultIndex][0].transcript;
+          console.log('Interim result:', interimTranscript);
+          messageInput.val(interimTranscript);
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+        };
+
+        recognition.onend = () => {
+          console.log('Speech recognition ended.');
+        };
+
+        recognition.start();
+      } else {
+        console.error('Speech recognition not supported in this browser.');
+        voiceButton.prop('disabled', true);
+      }
+    }
+
+    init();
+  });
+</script>
 </body>
 </html>
