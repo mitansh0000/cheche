@@ -123,16 +123,17 @@ $(document).ready(() => {
     }
 
     usernameForm.submit((e) => {
-      e.preventDefault();
+      e.preventDefault(); // Prevent the default form submission behavior
       setUsername();
     });
-        // Handle "Enter" key press in the message input
-        messageInput.keydown((e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault(); // Prevent the default behavior (form submission or page reload)
-        sendMessage(); // Call your sendMessage function
-      }
-    });
+
+    // Handle "Enter" key press in the message input
+messageInput.keydown((e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault(); // Prevent the default behavior (form submission or page reload)
+    sendMessage(); // Call your sendMessage function
+  }
+});
 
     fileInput.change(handleFileInputChange);
     sendButton.click(() => sendMessage());
@@ -147,6 +148,7 @@ $(document).ready(() => {
       localStorage.setItem('username', username);
       usernameModal.modal('hide');
       enableChat();
+      return false; // Prevent the default form submission behavior
     }
   }
 
@@ -168,33 +170,25 @@ $(document).ready(() => {
     }
   }
 
-function sendMessage(message) {
-  const content = messageInput.val().trim();
-  let finalMessage = '';
+  function sendMessage(message) {
+    const content = messageInput.val().trim();
+    let finalMessage = '';
 
-  if (content !== '' || (message && message.startsWith('data:image/'))) {
-    // Prepend the username to the message
-    const username = localStorage.getItem('username') || 'Anonymous';
-    finalMessage = `<strong>${username}:</strong> ${content}`;
+    if (content !== '' || (message && message.startsWith('data:image/'))) {
+      const username = localStorage.getItem('username') || 'Anonymous';
+      finalMessage = `<strong>${username}:</strong> ${content}`;
 
-    // Check if the message is an image (data URL starts with 'data:image/')
-    if (message) {
-      finalMessage += `<br><img src="${message}" style="max-width: 100%; max-height: 200px;">`;
+      if (message) {
+        finalMessage += `<br><img src="${message}" style="max-width: 100%; max-height: 200px;">`;
+      }
+
+      socket.emit('message', finalMessage);
+      messageInput.val('');
+      // Enable the send button after sending a message
+      sendButton.prop('disabled', false);
+      fileInput.val('');
     }
-
-    // Emit the message to the server
-    socket.emit('message', finalMessage);
-
-    // Clear the text input
-    messageInput.val('');
-
-    // Disable the send button
-    sendButton.prop('disabled', true);
-
-    // Enable the file input for the next message
-    fileInput.val('');
   }
-}
 
   function displayMessageHistory(messages) {
     messages.forEach((message) => displayMessage(message));
@@ -211,7 +205,6 @@ function sendMessage(message) {
     chatContainer.scrollTop(chatContainer[0].scrollHeight);
   }
 
-  // Initialize the application
   init();
 });
   </script>  
