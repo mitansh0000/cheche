@@ -93,12 +93,6 @@
           <button id="sendButton" class="btn btn-primary bg-info" type="button" disabled>
             <i class="fas fa-paper-plane"></i> <!-- Font Awesome paper plane icon -->
           </button>
-          <button id="voiceButton" class="btn btn-primary bg-info" type="button">
-            <i class="fas fa-microphone"></i> 
-          </button>
-          <button id="stopVoiceButton" class="btn btn-primary bg-info" type="button" disabled>
-            <i class="fas fa-stop"></i>
-          </button>
         </div>
       </div>
     </form>
@@ -109,7 +103,6 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
   <script src="/socket.io/socket.io.js"></script>
-<!-- ... (your existing script code) ... -->
 
 <script>
 $(document).ready(() => {
@@ -118,8 +111,6 @@ $(document).ready(() => {
   const fileInput = $('#fileInput');
   const messagesList = $('#messages');
   const sendButton = $('#sendButton');
-  const voiceButton = $('#voiceButton');
-  const stopVoiceButton = $('#stopVoiceButton');
   const usernameModal = $('#username-modal');
   const usernameInput = $('#username');
   const usernameForm = $('#username-form');
@@ -170,7 +161,6 @@ $(document).ready(() => {
     messageInput.prop('disabled', false);
     sendButton.prop('disabled', false);
     fileInput.prop('disabled', false);
-    voiceButton.prop('disabled', false);
   }
 
   function handleFileInputChange(e) {
@@ -241,54 +231,6 @@ $(document).ready(() => {
     const chatContainer = $('#chat-container .card-body');
     chatContainer.scrollTop(chatContainer[0].scrollHeight);
   }
-
-  function startRecording() {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then((stream) => {
-        mediaRecorder = new MediaRecorder(stream);
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunks.push(event.data);
-          }
-        };
-
-        mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          sendMessage(audioUrl); // Send the audio as a message
-
-          // Clean up
-          audioChunks = [];
-        };
-
-        mediaRecorder.start();
-        console.log('Recording started...');
-        voiceButton.prop('disabled', true);
-        stopVoiceButton.prop('disabled', false);
-      })
-      .catch((error) => {
-        console.error('Error accessing microphone:', error);
-      });
-  }
-
-  function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop();
-      console.log('Recording stopped...');
-      voiceButton.prop('disabled', false);
-      stopVoiceButton.prop('disabled', true);
-    }
-  }
-
-  voiceButton.click(() => {
-    startRecording();
-  });
-
-  stopVoiceButton.click(() => {
-    stopRecording();
-  });
-
   init();
 });
 </script>
