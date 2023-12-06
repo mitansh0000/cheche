@@ -30,8 +30,12 @@
       padding: 10px;
     }
     #sendButton{
-        background-color: #17a2b8;
-        color: black;
+      background-color: #17a2b8;
+      color: black;
+    }
+    #voiceButton{
+      background-color: #17a2b8;
+      color: black;
     }
     #username-modal {
       display: none;
@@ -189,7 +193,7 @@
             finalMessage += `<br><img src="${message}" style="max-width: 100%; max-height: 200px;">`;
           }
 
-          socket.emit('message', finalMessage);
+          socket.emit('message', finalMessage, username);
           messageInput.val('');
           sendButton.prop('disabled', false);
           fileInput.val('');
@@ -216,8 +220,9 @@ function displayMessage(message) {
     }
   );
   deleteButton.click(() => {
-    socket.emit('deleteMessage', message.id);
-  });
+  const requestingUsername = localStorage.getItem('username');
+  socket.emit('deleteMessage', message.id, requestingUsername);
+});
 
   messagesList.append(listItem);
   scrollToBottom();
