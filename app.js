@@ -1,3 +1,4 @@
+const path = require('path');
 function generateMessageId() {
   // You need to implement a function to generate a unique message ID
   // For simplicity, you can use a timestamp as the message ID, but this may not be foolproof in a real-world scenario
@@ -10,7 +11,7 @@ const socketIO = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
-
+const videoCallSockets = io.of('/video-call');
 app.use(express.static('public'));
 
 const messages = [];
@@ -47,7 +48,34 @@ io.on('connection', (socket) => {
     socket.username = username;
   });
 });
+// Define a route for the video call page
+app.get('/video-call', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'video-call.html'));
+});
+// Video Call Socket Namespace
+videoCallSockets.on('connection', (socket) => {
+  console.log('A user connected to video call');
 
+  socket.on('join-room', () => {
+    socket.join('video-call-room');
+  });
+
+  socket.on('ice-candidate', (candidate) => {
+    videoCallSockets.to('video-call-room').emit('ice-candidate', candidate);
+  });
+
+  socket.on('offer', (offer) => {
+    videoCallSockets.to('video-call-room').emit('offer', offer);
+  });
+
+  socket.on('answer', (answer) => {
+    videoCallSockets.to('video-call-room').emit('answer', answer);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected from video call');
+  });
+});
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
