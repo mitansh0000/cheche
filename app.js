@@ -20,17 +20,17 @@ io.on('connection', (socket) => {
 
   socket.emit('messageHistory', messages);
 
-  socket.on('message', (message) => {
+  socket.on('message', (message, username) => {
     const messageId = generateMessageId();
-    const messageWithId = { id: messageId, content: message };
+    const messageWithId = { id: messageId, content: message, username: username };
     messages.push(messageWithId);
     io.emit('message', messageWithId);
-  })
+  });
 
-  socket.on('deleteMessage', (messageId) => {
-    console.log('Received deleteMessage event on server', messageId);
-    if (messageId) {
-      const index = messages.findIndex((message) => message.id === messageId);
+  socket.on('deleteMessage', (messageId, requestingUsername) => {
+    console.log('Received deleteMessage event on server', messageId, requestingUsername);
+    if (messageId && requestingUsername) {
+      const index = messages.findIndex((message) => message.id === messageId && message.username === requestingUsername);
       if (index !== -1) {
         const deletedMessage = messages.splice(index, 1)[0];
         io.emit('deleteMessage', { messageId: deletedMessage.id });
