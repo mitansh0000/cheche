@@ -51,10 +51,33 @@
     #sendImageLabel{
         color: black;
     }
+    #navbarNav {
+      text-align: center;
+    }
+    .navbar-toggler-icon {
+      color: #fff;
+    }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body>
+    <!-- Add the Bootstrap Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-info">
+      <a class="navbar-brand" style="color: black; font-weight: bolder;" href="/">B-Socio</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item">
+            <a class="nav-link" style="color: black;" href="/">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" style="color: black;" href="/video-call">Video Call</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
   <!-- Username Modal -->
   <div id="username-modal" class="modal">
     <div class="modal-dialog">
@@ -77,7 +100,7 @@
 
   <div id="chat-container" class="card">
     <div class="card-header bg-info text-violet text-center">
-      <h2 class="mb-0">B-Socio</h2>
+      <h2 class="mb-0">WELCOME ${#username}</h2>
     </div>
     <div class="card-body">
       <ul id="messages" class="list-group"></ul>
@@ -114,8 +137,6 @@ $(document).ready(() => {
   const usernameModal = $('#username-modal');
   const usernameInput = $('#username');
   const usernameForm = $('#username-form');
-  let mediaRecorder;
-  let audioChunks = [];
 
   function init() {
     const storedUsername = localStorage.getItem('username');
@@ -123,6 +144,7 @@ $(document).ready(() => {
     if (storedUsername) {
       $('#username').val(storedUsername);
       enableChat();
+      updateWelcomeMessage(storedUsername);
     } else {
       $('#username-modal').modal('show');
     }
@@ -230,6 +252,9 @@ $(document).ready(() => {
   function scrollToBottom() {
     const chatContainer = $('#chat-container .card-body');
     chatContainer.scrollTop(chatContainer[0].scrollHeight);
+  }
+  function updateWelcomeMessage(username) {
+    $('#chat-container .card-header h2').text(`WELCOME ${username} !`);
   }
   init();
 });
