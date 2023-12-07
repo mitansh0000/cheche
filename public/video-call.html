@@ -7,6 +7,7 @@
 
     <style type="text/css">
       body {
+      background-color: black !important;
         margin: 0;
         font-size: 20px;
       }
@@ -42,22 +43,47 @@
         height: 100%;
         width: 100%;
       }
+      #room-input{
+        border-radius: 10px;
+        background-color: #FFFFF7;
+      }
+      button{
+        border-radius: 5px;
+        background-color: #17a2b8;
+        border-color: black;
+        font-weight: bold;
+      }
     </style>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
   </head>
 
   <body>
-    <div id="room-selection-container" class="centered">
-      <h1>B-Socio</h1>
-      <label>Enter the number of the room you want to connect</label>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-info">
+      <a class="navbar-brand" style="color: black; font-weight: bolder;" href="/">B-Socio</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item">
+            <a class="nav-link" style="color: black;" href="/">Home</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <div id="room-selection-container" class="centered" style="background-color: #17a2b8; border-radius: 10px; height: 50%; width: 60%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <label style="color: black; font-weight: bolder; text-align: center;">Enter The Room Number You Want To Connect =></label>
       <input id="room-input" type="text" />
-      <button id="connect-button">CONNECT</button>
-    </div>
+      <button id="connect-button">Connect</button>
+    </div>    
 
     <div id="video-chat-container" class="video-position" style="display: none">
       <video id="local-video" autoplay="autoplay" muted="muted"></video>
       <video id="remote-video" autoplay="autoplay"></video>
     </div>
-
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
   <script>
 // DOM elements.
