@@ -7,12 +7,12 @@ function generateMessageId() {
 const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
-
+let stream = require( './ws/stream' );
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
-const videoCallSockets = io.of('/video-call');
 app.use(express.static('public'));
+app.use( '/src', express.static( path.join( __dirname, 'src' ) ) );
 
 const messages = [];
 
@@ -69,24 +69,8 @@ io.on('connection', (socket) => {
 app.get('/video-call', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'video-call.html'));
 });
- // These events are emitted to all the sockets connected to the same room except the sender.
- socket.on('start_call', (roomId) => {
-  console.log(`Broadcasting start_call event to peers in room ${roomId}`)
-  socket.broadcast.to(roomId).emit('start_call')
-})
-socket.on('webrtc_offer', (event) => {
-  console.log(`Broadcasting webrtc_offer event to peers in room ${event.roomId}`)
-  socket.broadcast.to(event.roomId).emit('webrtc_offer', event.sdp)
-})
-socket.on('webrtc_answer', (event) => {
-  console.log(`Broadcasting webrtc_answer event to peers in room ${event.roomId}`)
-  socket.broadcast.to(event.roomId).emit('webrtc_answer', event.sdp)
-})
-socket.on('webrtc_ice_candidate', (event) => {
-  console.log(`Broadcasting webrtc_ice_candidate event to peers in room ${event.roomId}`)
-  socket.broadcast.to(event.roomId).emit('webrtc_ice_candidate', event)
-})
 });
+io.of( '/stream' ).on( 'connection', stream );
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
