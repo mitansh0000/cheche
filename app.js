@@ -1,8 +1,3 @@
-function generateMessageId() {
-  // You need to implement a function to generate a unique message ID
-  // For simplicity, you can use a timestamp as the message ID, but this may not be foolproof in a real-world scenario
-  return Date.now().toString();
-}
 const express = require('express');
 const http = require('http');
 const app = express();
@@ -51,7 +46,6 @@ io.on('connection', (socket) => {
 
     // Notify about the chat room
     io.to(roomId).emit('chat-joined', username);
-  });
 
   socket.on('offer', (roomId, offer, from) => {
     socket.to(roomId).emit('offer', offer, from);
@@ -88,6 +82,7 @@ io.on('connection', (socket) => {
 
   socket.on('setUsername', (username) => {
     socket.username = username;
+  });
   });
 
 // Define a route for the video call page
