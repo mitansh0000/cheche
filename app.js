@@ -89,7 +89,6 @@ io.on('connection', (socket) => {
   socket.on('setUsername', (username) => {
     socket.username = username;
   });
-});
 
 // Define a route for the video call page
 app.get('/video-call', (req, res) => {
