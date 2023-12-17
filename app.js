@@ -1,4 +1,3 @@
-const path = require('path');
 function generateMessageId() {
   // You need to implement a function to generate a unique message ID
   // For simplicity, you can use a timestamp as the message ID, but this may not be foolproof in a real-world scenario
@@ -6,16 +5,23 @@ function generateMessageId() {
 }
 const express = require('express');
 const http = require('http');
-const socketIO = require('socket.io');
-let stream = require( './ws/stream' );
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
-app.use(express.static('public'));
-app.use( '/src', express.static( path.join( __dirname, 'src' ) ) );
+const io = require('socket.io')(server);
+const path = require('path');
 
-const messages = [];
+const peers = {};
+const messages = {};
 
+function generateMessageId() {
+  return Date.now().toString();
+}
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Chat logic
 io.on('connection', (socket) => {
   console.log('A user connected');
 
@@ -24,39 +30,57 @@ io.on('connection', (socket) => {
   socket.on('message', (message, username) => {
     const messageId = generateMessageId();
     const messageWithId = { id: messageId, content: message, username: username };
-    messages.push(messageWithId);
-    io.emit('message', messageWithId);
+    if (!messages[socket.room]) {
+      messages[socket.room] = [];
+    }
+    messages[socket.room].push(messageWithId);
+    io.to(socket.room).emit('message', messageWithId);
   });
 
   socket.on('deleteMessage', (messageId, requestingUsername) => {
     console.log('Received deleteMessage event on server', messageId, requestingUsername);
     if (messageId && requestingUsername) {
-      const index = messages.findIndex((message) => message.id === messageId && message.username === requestingUsername);
+      const index = messages[socket.room].findIndex((message) => message.id === messageId && message.username === requestingUsername);
       if (index !== -1) {
-        const deletedMessage = messages.splice(index, 1)[0];
-        io.emit('deleteMessage', { messageId: deletedMessage.id });
+        const deletedMessage = messages[socket.room].splice(index, 1)[0];
+        io.to(socket.room).emit('deleteMessage', { messageId: deletedMessage.id });
         console.log('Message deleted on server', deletedMessage);
       }
     }
   });
-  socket.on('join', (roomId) => {
-    const selectedRoom = io.sockets.adapter.rooms[roomId]
-    const numberOfClients = selectedRoom ? selectedRoom.length : 0
 
-    // These events are emitted only to the sender socket.
-    if (numberOfClients == 0) {
-      console.log(`Creating room ${roomId} and emitting room_created socket event`)
-      socket.join(roomId)
-      socket.emit('room_created', roomId)
-    } else if (numberOfClients == 1) {
-      console.log(`Joining room ${roomId} and emitting room_joined socket event`)
-      socket.join(roomId)
-      socket.emit('room_joined', roomId)
-    } else {
-      console.log(`Can't join room ${roomId}, emitting full_room socket event`)
-      socket.emit('full_room', roomId)
+    // Notify about the chat room
+    io.to(roomId).emit('chat-joined', username);
+  });
+
+  socket.on('offer', (roomId, offer, from) => {
+    socket.to(roomId).emit('offer', offer, from);
+  });
+
+  socket.on('answer', (roomId, answer, from) => {
+    socket.to(roomId).emit('answer', answer, from);
+  });
+
+  socket.on('ice-candidate', (roomId, candidate, from) => {
+    socket.to(roomId).emit('ice-candidate', candidate, from);
+  });
+
+  socket.on('user-disconnected', () => {
+    for (const roomId in peers) {
+      const index = peers[roomId].indexOf(socket.id);
+      if (index !== -1) {
+        peers[roomId].splice(index, 1);
+
+        // Notify remaining users in the room about the disconnection
+        io.to(roomId).emit('user-disconnected', socket.id);
+
+        // Update connections for the remaining users in the room
+        peers[roomId].forEach(peerId => {
+          io.to(peerId).emit('ready', roomId, socket.id);
+        });
+      }
     }
-  })
+  });
 
   socket.on('disconnect', () => {
     console.log('User disconnected');
@@ -65,12 +89,13 @@ io.on('connection', (socket) => {
   socket.on('setUsername', (username) => {
     socket.username = username;
   });
+});
+
 // Define a route for the video call page
 app.get('/video-call', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'video-call.html'));
 });
-});
-io.of( '/stream' ).on( 'connection', stream );
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
